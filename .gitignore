@@ -1,0 +1,26 @@
+# Data and Datasets
+data/
+*.nc
+
+# Model Weights
+ocean_model.pth
+*.pth
+*.pt
+
+# Python Virtual Environments
+venv/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# IDE & OS Files
+.vscode/
+.DS_Store
+Thumbs.db
+
+runner.ipynb
