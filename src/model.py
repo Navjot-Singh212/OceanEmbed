@@ -45,12 +45,14 @@ class ConvLSTM_Cell(nn.Module):
 
 
 class OceanForecaster(nn.Module):
-    def __init__(self,input_channels=7,hidden_channels=16,output_channels=15,kernel_size=3):
+    def __init__(self,input_channels=7,hidden_channels=32,output_channels=15,kernel_size=3):
         super(OceanForecaster,self).__init__()
 
         self.hidden_channels=hidden_channels
 
         self.conv_lstm=ConvLSTM_Cell(input_channels,self.hidden_channels,kernel_size=kernel_size)
+
+        self.dropout = nn.Dropout2d(p=0.2)
 
         self.final_conv=nn.Conv2d(in_channels=hidden_channels,out_channels=output_channels,kernel_size=1)
 
@@ -62,7 +64,9 @@ class OceanForecaster(nn.Module):
         for t in range(seq_len):
             h_t,c_t=self.conv_lstm(x[:, t, :, :, :],(h_t,c_t))
 
-        output=self.final_conv(h_t)
+        h_t_dropped = self.dropout(h_t)
+
+        output=self.final_conv(h_t_dropped)
 
         return output
 
@@ -72,7 +76,7 @@ if __name__ == "__main__":
 
     dummy_input = torch.randn(4, 7, 7, 101, 241) 
 
-    model = OceanForecaster(input_channels=7, hidden_channels=16, output_channels=15)
+    model = OceanForecaster(input_channels=7, hidden_channels=64, output_channels=15)
 
     predictions = model(dummy_input)
 

@@ -11,12 +11,12 @@ class OceanDataset(Dataset):
         self.lazy=lazy
 
         self.file_map={
-           "sst": ("SST_processed.nc", "analysed_sst"),
-            "ssh": ("SSH_processed.nc", "sla"),
-            "sss": ("SSS_processed.nc", "sos"),
-            "winds": ("CCMP_Wind_Analysis_daily.nc", None),
-            "currents": ("oscar_currents_final_processed.nc", None),
-            "target": ("glory_target_processed.nc", "thetao")
+            "sst": ("sst_2013_2024_combined_processed.nc", "analysed_sst"),
+            "ssh": ("ssh_2013_2024_combined_processed.nc", "sla"),
+            "sss": ("sss_2013_2024_combined_processed.nc", "sos"),
+            "winds": ("ccmp_yearly_processed.nc", None),
+            "currents": ("oscar_yearly_processed.nc", None),
+            "target": ("glory_yearly_processed.nc", "thetao")
         }
         ref_path=os.path.join(self.normalised_dir,self.file_map["sst"][0])
         with xr.open_dataset(ref_path) as ds:
@@ -59,29 +59,31 @@ class OceanDataset(Dataset):
             if self.ds_handles is None:
                 self._init_lazy_handles()
 
-            past_sst = self.ds_handles["sst"].isel(time=time_slice).values
-            past_ssh = self.ds_handles["ssh"].isel(time=time_slice).values
-            past_sss = self.ds_handles["sss"].isel(time=time_slice).values.squeeze()
-            past_wind_u = self.ds_handles["winds"]["uwnd"].isel(time=time_slice).values
-            past_wind_v = self.ds_handles["winds"]["vwnd"].isel(time=time_slice).values
-            past_curr_u = self.ds_handles["currents"]["u"].isel(time=time_slice).values
-            past_curr_v = self.ds_handles["currents"]["v"].isel(time=time_slice).values
+            past_sst = np.nan_to_num(self.ds_handles["sst"].isel(time=time_slice).values, nan=0.0)
+            past_ssh = np.nan_to_num(self.ds_handles["ssh"].isel(time=time_slice).values, nan=0.0)
+            past_sss = np.nan_to_num(self.ds_handles["sss"].isel(time=time_slice).values.squeeze(), nan=0.0)
+            past_wind_u = np.nan_to_num(self.ds_handles["winds"]["uwnd"].isel(time=time_slice).values, nan=0.0)
+            past_wind_v = np.nan_to_num(self.ds_handles["winds"]["vwnd"].isel(time=time_slice).values, nan=0.0)
+            past_curr_u = np.nan_to_num(self.ds_handles["currents"]["u"].isel(time=time_slice).transpose("time", "lat", "lon").values, nan=0.0)
+            past_curr_v = np.nan_to_num(self.ds_handles["currents"]["v"].isel(time=time_slice).transpose("time", "lat", "lon").values, nan=0.0)
+
+            target_thetao = np.nan_to_num(self.ds_handles["target"].isel(time=target_idx).values, nan=0.0)
 
             target_thetao = self.ds_handles["target"].isel(time=target_idx).values
         else:
-            past_sst = self.data_in_memory["sst"][time_slice]
-            past_ssh = self.data_in_memory["ssh"][time_slice]
-            past_sss = self.data_in_memory["sss"][time_slice].squeeze()
-            past_wind_u = self.data_in_memory["winds"]["uwnd"].isel(time=time_slice).values
-            past_wind_v = self.data_in_memory["winds"]["vwnd"].isel(time=time_slice).values
-            past_curr_u = self.data_in_memory["currents"]["u"].isel(time=time_slice).values
-            past_curr_v = self.data_in_memory["currents"]["v"].isel(time=time_slice).values
+            past_sst = np.nan_to_num(self.data_in_memory["sst"][time_slice], nan=0.0)
+            past_ssh = np.nan_to_num(self.data_in_memory["ssh"][time_slice], nan=0.0)
+            past_sss = np.nan_to_num(self.data_in_memory["sss"][time_slice].squeeze(), nan=0.0)
+            past_wind_u = np.nan_to_num(self.data_in_memory["winds"]["uwnd"].isel(time=time_slice).values, nan=0.0)
+            past_wind_v = np.nan_to_num(self.data_in_memory["winds"]["vwnd"].isel(time=time_slice).values, nan=0.0)
+            past_curr_u = np.nan_to_num(self.data_in_memory["currents"]["u"].isel(time=time_slice).transpose("time", "lat", "lon").values, nan=0.0)
+            past_curr_v = np.nan_to_num(self.data_in_memory["currents"]["v"].isel(time=time_slice).transpose("time", "lat", "lon").values, nan=0.0)
 
-            target_thetao = self.data_in_memory["target"][target_idx]
-            
-        if past_curr_u.shape != past_sst.shape:
-            past_curr_u = np.swapaxes(past_curr_u, 1, 2)
-            past_curr_v = np.swapaxes(past_curr_v, 1, 2)
+            target_thetao = np.nan_to_num(self.data_in_memory["target"][target_idx], nan=0.0)
+
+        # if past_curr_u.shape != past_sst.shape:
+        #     past_curr_u = np.swapaxes(past_curr_u, 1, 2)
+        #     past_curr_v = np.swapaxes(past_curr_v, 1, 2)
 
         depth_indices = [0, 3, 7, 11, 15, 18, 20, 22, 24, 26, 28, 30, 32, 34, 35]  #extracted directly from the Copernicus design for ocean depth levels from 0.49m to 1062.44m    
         target_thetao=target_thetao[depth_indices,:,:]
@@ -99,7 +101,7 @@ class OceanDataset(Dataset):
         return x_tensor,y_tensor
 
 if __name__=="__main__":
-    norm_dir = r"D:\Coding and programming\Hackathon Projects\OceanEmbed\data\normalized"
+    norm_dir = r"/content/drive/MyDrive/OceanEmbed/data/normalized"
     dataset=OceanDataset(normalised_dir=norm_dir,sequence_length=7,lazy=False)
     print(f"Total trainable sequence in dataset: {len(dataset)}")
 
